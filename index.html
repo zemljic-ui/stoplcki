@@ -304,5 +304,135 @@
   };
   updateGuide();
 })();
+</script><script id="adventure-levels">
+(() => {
+  const path = $('#levelPath');
+  const play = $('#playLevel');
+  const claim = $('#claim');
+  const details = $('#levelInfoText');
+  const campaign = [
+    { name: 'Prva izmena', icon: '🚗', mission: MISSIONS[0] },
+    { name: 'Živali in roboti', icon: '🤖', mission: MISSIONS[1] }
+  ];
+  const styles = document.createElement('style');
+  styles.textContent = [
+    '.level-path{grid-template-columns:repeat(6,minmax(0,1fr))}',
+    '.level-card.adventure{grid-column:span 3;background:#fffdf4;min-height:114px;padding:13px;overflow-wrap:anywhere}',
+    '.level-card.adventure.selected{background:#fff0b0}.level-card.adventure.complete{border-color:#247556}.level-card.adventure small{display:block;font-size:14px;line-height:1.3;opacity:1}',
+    '.level-card.future{min-height:0;padding:9px;background:#f4f7f2}.level-card.future b{font-size:13px}.level-card.future .level-icon{float:none;display:block;font-size:22px}.level-card.future small{font-size:12px}',
+    '.level-info{align-items:flex-start}.level-info>div{min-width:0}.level-info p{line-height:1.4}.level-info .level-progress{display:block;margin-top:6px;font-size:14px;font-weight:850}',
+    '.level-info .play-level{min-height:44px;white-space:normal}.level-info .play-level.reward-ready{background:var(--mint);color:var(--ink)}',
+    '@media(max-width:620px){.level-path{grid-template-columns:repeat(3,minmax(0,1fr))}.level-card.adventure{grid-column:span 3}.level-info{flex-direction:column}.level-info .play-level{width:100%}}'
+  ].join('');
+  document.head.append(styles);
+  const extra = document.createElement('span');
+  extra.className = 'level-progress';
+  details.after(extra);
+  const announcement = document.createElement('p');
+  announcement.setAttribute('role', 'status');
+  announcement.hidden = true;
+  $('.level-info').after(announcement);
+  $('.level-map').previousElementSibling.querySelector('p').textContent = 'Dokončaj naročilo in prevzemi nagrado za nivo.';
+  $('#level').parentElement.querySelector('small').textContent = 'rang tovarne';
+  const helpSteps = $('#helpOverlay ol').children;
+  helpSteps[1].textContent = 'Poglej cilj nivoja in pritisni gumb za naslednji korak.';
+  helpSteps[6].textContent = 'Prevzemi nagrado prvega nivoja, da odkleneš drugega. Rang tovarne raste z izdelanimi igračami.';
+
+  const openLevel = () => Math.min(state.mission + 1, campaign.length);
+  const selectedLevel = () => Math.min(state.adventureLevel || openLevel(), openLevel());
+  const soldFor = id => Math.max(0, (state.sold[id] || 0) - (state.missionStart[id] || 0));
+  function nextTask(level) {
+    if (level <= state.mission) return 'continue';
+    const mission = campaign[level - 1].mission;
+    if (missionProgress(mission).ready) return 'claim';
+    if (!state.sold.car && level === 1) return 'guide';
+    const toy = TOYS.find(item => (mission.need[item.id] || 0) > soldFor(item.id));
+    if (state.made[toy.id] > 0) return 'shop';
+    return state.caps < toy.cost ? 'collect' : toy.id;
+  }
+  function drawAdventure(focusLevel) {
+    const level = selectedLevel();
+    const entry = campaign[level - 1];
+    const task = nextTask(level);
+    path.innerHTML = campaign.map((item, index) => {
+      const n = index + 1;
+      const locked = n > openLevel();
+      const completed = n <= state.mission;
+      const progress = completed ? '✓ Nagrada prevzeta' : locked ? '🔒 Najprej dokončaj 1. nivo'
+        : 'Prodano ' + missionProgress(item.mission).done + ' od ' + missionProgress(item.mission).all;
+      return '<button type="button" class="level-card adventure' + (n === level ? ' selected' : '') +
+        (completed ? ' complete' : '') + '" data-adventure="' + n + '" aria-pressed="' + (n === level) + '"' +
+        (locked ? ' disabled' : '') + '><span class="level-icon" aria-hidden="true">' + item.icon +
+        '</span><b>' + n + '. ' + item.name + '</b><small>' + item.mission.goal + '</small><small>' + progress + '</small></button>';
+    }).join('') + LEVELS.slice(campaign.length).map((item, index) =>
+      '<div class="level-card future"><span class="level-icon" aria-hidden="true">' + item.icon +
+      '</span><b>' + (index + campaign.length + 1) + '. ' + item.name + '</b><small>V pripravi</small></div>'
+    ).join('');
+    $('#levelInfoTitle').textContent = level + '. nivo · ' + entry.name;
+    details.textContent = entry.mission.goal + '. Nagrada: ' + entry.mission.reward + ' 🪙 in ' + entry.mission.stars + ' ⭐';
+    extra.textContent = level <= state.mission ? '✓ Cilj dosežen in nagrada prevzeta.' : Object.entries(entry.mission.need).map(([id, count]) => {
+      const toy = TOYS.find(item => item.id === id);
+      return toy.icon + ' ' + toy.name + ' · ' + Math.min(soldFor(id), count) + ' od ' + count;
+    }).join(' / ');
+    if (level === 1 && level > state.mission) extra.textContent += ' · Nagrada odklene 2. nivo.';
+    const labels = { claim: '🎁 Prevzemi nagrado', guide: '🚚 Začni s prvo igračo', shop: '🧸 Do trgovine', collect: '🚚 Do tovornjaka' };
+    play.textContent = task === 'continue'
+      ? (level < openLevel() ? 'Odpri 2. nivo' : 'Poglej naslednje naročilo')
+      : labels[task] || '🏭 Izdelaj naslednjo igračo';
+    play.classList.toggle('reward-ready', task === 'claim');
+    document.querySelectorAll('.toy-card.locked .badge').forEach(badge => {
+      badge.textContent = badge.textContent.replace('STOPNJA', 'RANG');
+    });
+    if (focusLevel) path.querySelector('[data-adventure="' + focusLevel + '"]')?.focus({ preventScroll: true });
+  }
+  function goTo(button) {
+    button.scrollIntoView({ block: 'center' });
+    if (!button.disabled) button.focus({ preventScroll: true });
+  }
+  path.addEventListener('click', event => {
+    const card = event.target.closest('[data-adventure]');
+    if (!card || card.disabled) return;
+    state.adventureLevel = Number(card.dataset.adventure);
+    save();
+    drawAdventure(state.adventureLevel);
+  });
+  play.addEventListener('click', event => {
+    event.stopImmediatePropagation();
+    const level = selectedLevel();
+    const task = nextTask(level);
+    if (task === 'claim') claim.click();
+    else if (task === 'continue' && level < openLevel()) {
+      state.adventureLevel = openLevel();
+      save();
+      drawAdventure(state.adventureLevel);
+    } else if (task === 'continue') $('.mission-board').scrollIntoView({ block: 'center' });
+    else if (task === 'guide') goTo($('#firstOrderAction'));
+    else if (task === 'collect') goTo($('#collect'));
+    else if (task === 'shop') goTo($('#shopSell'));
+    else {
+      if (!busy) $('[data-toy="' + task + '"]').click();
+      goTo($('#make'));
+    }
+  }, true);
+
+  let previousMission = state.mission;
+  const renderGameAndGuide = render;
+  render = function () {
+    const focusedLevel = document.activeElement?.dataset.adventure;
+    if (state.mission === previousMission + 1 && state.mission <= campaign.length) {
+      state.adventureLevel = openLevel();
+      announcement.textContent = state.mission === 1 ? '🎉 Prvi nivo je končan. Drugi nivo je odklenjen!'
+        : '🎉 Oba nivoja sta končana! V tovarni lahko nadaljuješ z naročili.';
+      announcement.hidden = false;
+    } else if (state.mission < previousMission) {
+      announcement.textContent = '';
+      announcement.hidden = true;
+    }
+    previousMission = state.mission;
+    renderGameAndGuide();
+    drawAdventure(focusedLevel);
+  };
+  drawAdventure();
+})();
 </script>
 </body></html>
