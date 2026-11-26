@@ -144,23 +144,57 @@
   const TOYS=[{id:'car',name:'Avtomobilček',icon:'🚗',cost:4,value:10,color:'#ff685f',unlock:1},{id:'animal',name:'Živalica',icon:'🐢',cost:6,value:18,color:'#42c99a',unlock:1},{id:'robot',name:'Robotek',icon:'🤖',cost:8,value:25,color:'#8f6be8',unlock:1},{id:'ship',name:'Vesoljska ladja',icon:'🚀',cost:12,value:40,color:'#4b9fe8',unlock:2},{id:'train',name:'Vlak',icon:'🚂',cost:14,value:48,color:'#e89431',unlock:3},{id:'dino',name:'Dinozaver',icon:'🦕',cost:18,value:65,color:'#71b65c',unlock:4}];
   const LEVELS=[{name:'Prva izmena',icon:'🏭',desc:'Izdelaj in prodaj prve igrače.',reward:'Rumena tovarna'},{name:'Veliko naročilo',icon:'📋',desc:'Izpolni naročila in odkleni vesoljsko ladjo.',reward:'Večji tovornjak'},{name:'Železniška postaja',icon:'🚂',desc:'Zgradi vlak in železniško postajo.',reward:'Hitrejši stroj'},{name:'Dino park',icon:'🦕',desc:'Odpri park z dinozavri.',reward:'Zelena tovarna'},{name:'Vesoljska odprava',icon:'🚀',desc:'Sestavi veliko raketo.',reward:'Zlati tovornjak'},{name:'Mesto igrač',icon:'🏙️',desc:'Odpri nove trgovine v mestu.',reward:'Več obiskovalcev'},{name:'Reševalna akcija',icon:'🌊',desc:'Očisti reko in gozd.',reward:'Mavrična tovarna'},{name:'Veliki festival',icon:'🎪',desc:'Pripravi praznovanje vseh igrač.',reward:'Pokal mojstra'}];
   const UP=[{id:'magnet',icon:'🧲',name:'Super magnet',desc:'Zbere več pokrovčkov',base:35,max:3},{id:'machine',icon:'⚙️',name:'Hitri stroj',desc:'Igrače izdela hitreje',base:55,max:3},{id:'market',icon:'🏪',name:'Vesela trgovina',desc:'Igrače proda dražje',base:70,max:3}];
-  const MISSIONS=[{title:'Prva avtomobilska pošiljka',goal:'Prodaj 2 avtomobilčka',need:{car:2},reward:20,stars:1},{title:'Živali in roboti',goal:'Prodaj 1 živalico in 1 robotka',need:{animal:1,robot:1},reward:30,stars:1},{title:'Polet v vesolje',goal:'Prodaj 1 vesoljsko ladjo',need:{ship:1},reward:45,stars:2},{title:'Železniška postaja',goal:'Prodaj 2 vlaka',need:{train:2},reward:60,stars:2},{title:'Dino dan',goal:'Prodaj 1 dinozavra',need:{dino:1},reward:80,stars:3}];
+  const MISSIONS = [
+    {title:'Prva avtomobilska pošiljka', goal:'Prodaj 2 avtomobilčka', need:{car:2}, reward:20, stars:1},
+    {title:'Živali in roboti', goal:'Prodaj 1 živalico in 1 robotka', need:{animal:1,robot:1}, reward:30, stars:1},
+    {title:'Vesoljska odprava', goal:'Izdelaj in prodaj 1 vesoljsko ladjo', need:{ship:1}, reward:45, stars:2},
+    {title:'Železniška postaja', goal:'Izdelaj in prodaj 2 vlaka', need:{train:2}, reward:60, stars:2},
+    {title:'Dino park', goal:'Izdelaj in prodaj 1 dinozavra', need:{dino:1}, reward:80, stars:3},
+    {title:'Mesto igrač', goal:'Prodaj avtomobilček, živalico in robotka', need:{car:1,animal:1,robot:1}, reward:95, stars:3},
+    {title:'Reševalna akcija', goal:'S tovornjakom poberi 12 pokrovčkov ob potoku', need:{}, cleanup:12, reward:100, stars:3},
+    {title:'Veliki festival', goal:'Prodaj vesoljsko ladjo, vlak in dinozavra', need:{ship:1,train:1,dino:1}, reward:180, stars:5}
+  ];
+  const CAMPAIGN_LENGTH = MISSIONS.length;
+  const CLEANUP_LEVEL = 7;
+  const SPECIAL_TOY_LEVEL = {ship:3, train:4, dino:5};
+  const missionIndex = () => state.mission < CAMPAIGN_LENGTH ? state.mission : (state.mission - CAMPAIGN_LENGTH) % 5;
+  const activeMission = () => MISSIONS[missionIndex()];
+  const toyAvailable = toy => state.level >= toy.unlock || state.mission + 1 >= SPECIAL_TOY_LEVEL[toy.id];
   const PAINTS=[{id:'eco',name:'🌿 Eko zelena',color:'#e5efe2',stars:0},{id:'sun',name:'☀️ Sončna rumena',color:'#ffe28a',stars:2},{id:'berry',name:'🫐 Borovničeva',color:'#c9c8ff',stars:5},{id:'rainbow',name:'🌈 Mavrična',color:'#ffbfdc',stars:8}];
-  const fresh=()=>({caps:12,coins:0,stars:0,level:1,chapter:1,selected:'car',made:{car:0,animal:0,robot:0,ship:0,train:0,dino:0},sold:{car:0,animal:0,robot:0,ship:0,train:0,dino:0},missionStart:{car:0,animal:0,robot:0,ship:0,train:0,dino:0},up:{magnet:0,machine:0,market:0},totalMade:0,served:0,mission:0,paint:'eco'});let state;
-  try{const old=JSON.parse(localStorage.getItem('stoplcki-save-v1')||'{}');state={...fresh(),...old,made:{...fresh().made,...(old.made||{})},sold:{...fresh().sold,...(old.sold||{})},missionStart:{...fresh().missionStart,...(old.missionStart||{})},up:{...fresh().up,...(old.up||{})}}}catch(e){state=fresh()}let busy=false,delivering=false;
+  const fresh=()=>({caps:12,coins:0,stars:0,level:1,chapter:1,selected:'car',made:{car:0,animal:0,robot:0,ship:0,train:0,dino:0},sold:{car:0,animal:0,robot:0,ship:0,train:0,dino:0},missionStart:{car:0,animal:0,robot:0,ship:0,train:0,dino:0},up:{magnet:0,machine:0,market:0},totalMade:0,served:0,mission:0,cleanupCaps:0,adventureVersion:1,paint:'eco'});let state;
+  try{const old=JSON.parse(localStorage.getItem('stoplcki-save-v1')||'{}');state={...fresh(),...old,made:{...fresh().made,...(old.made||{})},sold:{...fresh().sold,...(old.sold||{})},missionStart:{...fresh().missionStart,...(old.missionStart||{})},up:{...fresh().up,...(old.up||{})}};
+    if (!old.adventureVersion && state.mission > 5) {
+      // Stara izdaja je po petem naročilu ponavljala iste naloge.
+      state.mission = 5;
+      state.missionStart = {...state.sold};
+    }
+  }catch(e){state=fresh()}let busy=false,delivering=false;
   const $=s=>document.querySelector(s), save=()=>localStorage.setItem('stoplcki-save-v1',JSON.stringify(state));
   function sound(freq=440,d=.08){try{const A=window.AudioContext||window.webkitAudioContext,a=new A(),o=a.createOscillator(),g=a.createGain();o.connect(g);g.connect(a.destination);o.frequency.value=freq;g.gain.setValueAtTime(.05,a.currentTime);g.gain.exponentialRampToValueAtTime(.001,a.currentTime+d);o.start();o.stop(a.currentTime+d)}catch(e){}}
   function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('show');clearTimeout(e.t);e.t=setTimeout(()=>e.classList.remove('show'),1900)}
   const eventToy=()=>TOYS[Math.floor(Date.now()/86400000)%TOYS.length];
-  function levelCheck(){const old=state.level;state.level=state.totalMade>=45?5:state.totalMade>=25?4:state.totalMade>=12?3:state.totalMade>=4?2:1;if(state.level>old){const unlocked={2:'vesoljska ladja',3:'vlak in večji tovornjak',4:'dinozaver',5:'zlati mega tovornjak'}[state.level];toast(`🏆 Stopnja ${state.level}! Odklenjeno: ${unlocked}!`);confetti()}}
-  function missionProgress(m){const entries=Object.entries(m.need);const done=entries.reduce((n,[id,v])=>n+Math.min(Math.max(0,(state.sold[id]||0)-(state.missionStart[id]||0)),v),0),all=entries.reduce((n,[,v])=>n+v,0);return {done,all,ready:done>=all}}
-  function render(){levelCheck();$('#caps').textContent=state.caps;$('#coins').textContent=state.coins;$('#stars').textContent=state.stars||0;$('#level').textContent=state.level;$('#served').textContent=state.served||0;if(state.chapter>Math.min(state.level,2))state.chapter=Math.min(state.level,2);$('#levelPath').innerHTML=LEVELS.map((l,i)=>{const n=i+1,open=n<=Math.min(state.level,2);return `<button class="level-card ${state.chapter===n?'selected':''}" data-chapter="${n}" ${open?'':'disabled'}><span class="level-number">${open?n:'🔒'}</span><span class="level-icon">${l.icon}</span><b>${l.name}</b><small>${open?(n===1?'IGRIVO':n===2?'ODKLENJENO':'PRIPRAVLJENO'):'KMALU'}</small></button>`}).join('');const chapter=LEVELS[state.chapter-1];$('#levelInfoTitle').textContent=`Nivo ${state.chapter}: ${chapter.name}`;$('#levelInfoText').textContent=`${chapter.desc} Nagrada: ${chapter.reward}.`;const truckBonus=[0,0,2,4,6][state.level-1],delivery=[3,5,8,12][state.up.magnet]+truckBonus,truckName=state.level>=5?'ZLATI MEGA TOVORNJAK':state.level>=3?'VELIKI TOVORNJAK':'TOVORNJAK';$('#collect').firstChild.textContent=delivering?'🚚 TOVORNJAK PRIHAJA ':`🚚 POKLIČI ${truckName} `;$('#collectHint').textContent=delivering?'pokrovčki so na poti…':`pripelje ${delivery} pokrovčke`;$('#collect').disabled=delivering;$('#yard .truck').className=`truck ${state.level>=5?'mega gold':state.level>=3?'big':''}`;
-    $('#toyGrid').innerHTML=TOYS.map(t=>`<button class="toy-card ${state.selected===t.id?'selected':''} ${state.level<t.unlock?'locked':''}" data-toy="${t.id}" ${state.level<t.unlock?'disabled':''}><span class="badge">${state.level<t.unlock?'🔒 STOPNJA '+t.unlock:t.cost+' 🔵'}</span><div class="toy-visual"><span class="art">${t.icon}</span></div><div class="toy-name">${t.name}</div><div class="toy-info">Prodaja: ${Math.round(t.value*(1+state.up.market*.25))} 🪙</div></button>`).join('');
+  function levelCheck(){const old=state.level;state.level=state.totalMade>=45?5:state.totalMade>=25?4:state.totalMade>=12?3:state.totalMade>=4?2:1;if(state.level>old){const unlocked={2:'vesoljska ladja',3:'vlak in večji tovornjak',4:'dinozaver',5:'zlati mega tovornjak'}[state.level];toast(`🏆 Rang tovarne ${state.level}! Odklenjeno: ${unlocked}!`);confetti()}}
+  function missionProgress(mission) {
+    const needs = Object.entries(mission.need);
+    let done = Math.min(mission.cleanup || 0, state.cleanupCaps || 0);
+    let all = mission.cleanup || 0;
+    for (const [id, count] of needs) {
+      all += count;
+      done += Math.min(Math.max(0, state.sold[id] - state.missionStart[id]), count);
+    }
+    return {done, all, ready: done >= all};
+  }
+  function render(){levelCheck();$('#caps').textContent=state.caps;$('#coins').textContent=state.coins;$('#stars').textContent=state.stars||0;$('#level').textContent=state.level;$('#served').textContent=state.served||0;if(state.chapter>Math.min(state.level,2))state.chapter=Math.min(state.level,2);$('#levelPath').innerHTML=LEVELS.map((l,i)=>{const n=i+1,open=n<=Math.min(state.level,2);return `<button class="level-card ${state.chapter===n?'selected':''}" data-chapter="${n}" ${open?'':'disabled'}><span class="level-number">${open?n:'🔒'}</span><span class="level-icon">${l.icon}</span><b>${l.name}</b><small>${open?(n===1?'IGRIVO':n===2?'ODKLENJENO':'PRIPRAVLJENO'):'KMALU'}</small></button>`}).join('');const chapter=LEVELS[state.chapter-1];$('#levelInfoTitle').textContent=`Nivo ${state.chapter}: ${chapter.name}`;$('#levelInfoText').textContent=`${chapter.desc} Nagrada: ${chapter.reward}.`;const truckBonus=[0,0,2,4,6][state.level-1],delivery=[3,5,8,12][state.up.magnet]+truckBonus,truckName=state.level>=5?'ZLATI MEGA TOVORNJAK':state.level>=3?'VELIKI TOVORNJAK':'TOVORNJAK';$('#collect').firstChild.textContent=delivering?'🚚 TOVORNJAK PRIHAJA ':`🚚 POKLIČI ${truckName} `;$('#collectHint').textContent=delivering?'pokrovčki so na poti…':activeMission().cleanup && !missionProgress(activeMission()).ready ? 'pobere pokrovčke ob potoku' : 'pripelje '+delivery+' pokrovčkov';$('#collect').disabled=delivering;$('#yard .truck').className=`truck ${state.level>=5?'mega gold':state.level>=3?'big':''}`;
+    $('#toyGrid').innerHTML=TOYS.map(t=>`<button class="toy-card ${state.selected===t.id?'selected':''} ${!toyAvailable(t)?'locked':''}" data-toy="${t.id}" ${!toyAvailable(t)?'disabled':''}><span class="badge">${!toyAvailable(t)?'🔒 NIVO '+SPECIAL_TOY_LEVEL[t.id]:t.cost+' 🔵'}</span><div class="toy-visual"><span class="art">${t.icon}</span></div><div class="toy-name">${t.name}</div><div class="toy-info">Prodaja: ${Math.round(t.value*(1+state.up.market*.25))} 🪙</div></button>`).join('');
     const t=TOYS.find(x=>x.id===state.selected);$('#factoryItem').textContent=t.icon;$('#make').textContent=`IZDELAJ ${t.name.toUpperCase()} · ${t.cost} 🔵`;$('#make').disabled=busy||state.caps<t.cost;
     $('#inventory').innerHTML=TOYS.map(t=>`<div class="crate"><div class="art">${t.icon}</div><div class="count">${state.made[t.id]||0}</div><div class="toy-info">${t.name}</div><button class="sell-btn" data-sell="${t.id}" ${(state.made[t.id]||0)<1?'disabled':''}>PRODAJ · ${Math.round(t.value*(1+state.up.market*.25))} 🪙</button></div>`).join('');
     $('#upgrades').innerHTML=UP.map(u=>{const l=state.up[u.id],price=u.base*(l+1);return `<div class="upgrade"><div class="upgrade-icon">${u.icon}</div><div><h3>${u.name} <small>${'★'.repeat(l)}${'☆'.repeat(u.max-l)}</small></h3><p>${l>=u.max?'Najvišja stopnja!':u.desc}</p><button class="upgrade-btn" data-up="${u.id}" ${l>=u.max||state.coins<price?'disabled':''}>${l>=u.max?'KONČANO':'NADGRADI · '+price+' 🪙'}</button></div></div>`}).join('');
-    const m=MISSIONS[state.mission%MISSIONS.length],mp=missionProgress(m);$('#missionTitle').textContent=`Naročilo ${state.mission+1}: ${m.title}`;$('#missionGoal').textContent=m.goal;$('#missionReward').textContent=`Nagrada: ${m.reward} 🪙 in ${m.stars} ⭐`;$('#missionBar').style.width=(mp.done/mp.all*100)+'%';$('#claim').disabled=!mp.ready;$('#claim').textContent=mp.ready?'PREVZEMI NAGRADO 🎁':`NAPREDEK ${mp.done} / ${mp.all}`;const ev=eventToy();$('#eventIcon').textContent=ev.icon;$('#eventText').textContent=` Danes prinese ${ev.name.toLowerCase()} dodatnih 5 kovancev.`;$('#paints').innerHTML=PAINTS.map(p=>`<button class="paint-btn ${state.paint===p.id?'selected':''}" data-paint="${p.id}" ${(state.stars||0)<p.stars?'disabled':''}>${(state.stars||0)<p.stars?'🔒 '+p.stars+' ⭐':p.name}</button>`).join('');const paint=PAINTS.find(p=>p.id===state.paint)||PAINTS[0];document.documentElement.style.setProperty('--factory-face',paint.color);document.documentElement.style.setProperty('--speed',[2.4,1.65,.95,.55][state.up.machine]+'s');save();}
-  $('#collect').addEventListener('click',()=>{if(delivering)return;const n=[3,5,8,12][state.up.magnet]+[0,0,2,4,6][state.level-1];delivering=true;$('#yard').classList.add('delivery');sound(220,.12);render();toast('Tovornjak pelje pokrovčke v tovarno! 🚚');setTimeout(()=>{for(let i=0;i<Math.min(n,8);i++){const e=document.createElement('i');e.className='cap flying';e.style.left=`calc(100% - ${205+Math.random()*30}px)`;e.style.animationDelay=(i*.05)+'s';e.style.background=['#ff685f','#ffc94a','#42c99a','#4b9fe8','#8f6be8'][i%5];$('#yard').append(e);setTimeout(()=>e.remove(),1100)}sound(520,.14)},760);setTimeout(()=>{state.caps+=n;delivering=false;$('#yard').classList.remove('delivery');sound(720,.14);render();toast(`Tovarna je prejela ${n} pokrovčkov!`)},1850)});
+    const m=activeMission(),mp=missionProgress(m);$('#missionTitle').textContent=`Naročilo ${state.mission+1}: ${m.title}`;$('#missionGoal').textContent=m.goal;$('#missionReward').textContent=`Nagrada: ${m.reward} 🪙 in ${m.stars} ⭐`;$('#missionBar').style.width=(mp.done/mp.all*100)+'%';$('#claim').disabled=!mp.ready;$('#claim').textContent=mp.ready?'PREVZEMI NAGRADO 🎁':`NAPREDEK ${mp.done} / ${mp.all}`;const ev=eventToy();$('#eventIcon').textContent=ev.icon;$('#eventText').textContent=` Danes prinese ${ev.name.toLowerCase()} dodatnih 5 kovancev.`;$('#paints').innerHTML=PAINTS.map(p=>`<button class="paint-btn ${state.paint===p.id?'selected':''}" data-paint="${p.id}" ${(state.stars||0)<p.stars?'disabled':''}>${(state.stars||0)<p.stars?'🔒 '+p.stars+' ⭐':p.name}</button>`).join('');const paint=PAINTS.find(p=>p.id===state.paint)||PAINTS[0];document.documentElement.style.setProperty('--factory-face',paint.color);document.documentElement.style.setProperty('--speed',[2.4,1.65,.95,.55][state.up.machine]+'s');save();}
+  $('#collect').addEventListener('click',()=>{if(delivering)return;const cleanupRun = state.mission + 1 === CLEANUP_LEVEL; const n=[3,5,8,12][state.up.magnet]+[0,0,2,4,6][state.level-1];delivering=true;$('#yard').classList.add('delivery');sound(220,.12);render();toast('Tovornjak pelje pokrovčke v tovarno! 🚚');setTimeout(()=>{for(let i=0;i<Math.min(n,8);i++){const e=document.createElement('i');e.className='cap flying';e.style.left=`calc(100% - ${205+Math.random()*30}px)`;e.style.animationDelay=(i*.05)+'s';e.style.background=['#ff685f','#ffc94a','#42c99a','#4b9fe8','#8f6be8'][i%5];$('#yard').append(e);setTimeout(()=>e.remove(),1100)}sound(520,.14)},760);setTimeout(()=>{state.caps+=n;
+    if (cleanupRun && state.mission + 1 === CLEANUP_LEVEL) {
+      state.cleanupCaps = Math.min(activeMission().cleanup, state.cleanupCaps + n);
+    }
+    delivering=false;$('#yard').classList.remove('delivery');sound(720,.14);render();toast(`Tovarna je prejela ${n} pokrovčkov!`)},1850)});
   $('#toyGrid').addEventListener('click',e=>{const b=e.target.closest('[data-toy]');if(!b)return;state.selected=b.dataset.toy;sound(380);render()});
   $('#levelPath').addEventListener('click',e=>{const b=e.target.closest('[data-chapter]');if(!b)return;const n=Number(b.dataset.chapter);if(n>Math.min(state.level,2))return;state.chapter=n;sound(520,.1);render();toast(`Izbran je nivo ${n}: ${LEVELS[n-1].name}`)});
   $('#playLevel').addEventListener('click',()=>{$('.hero').scrollIntoView({behavior:'smooth',block:'start'});toast(`Začenja se: ${LEVELS[state.chapter-1].name}!`)});
@@ -171,7 +205,7 @@
   $('#make').addEventListener('click',()=>{if(busy)return;const t=TOYS.find(x=>x.id===state.selected);if(state.caps<t.cost){toast('Najprej zberi še nekaj pokrovčkov!');return}busy=true;state.caps-=t.cost;$('#machine').classList.add('working');$('#light').classList.add('on');render();const time=[2400,1650,950,550][state.up.machine];setTimeout(()=>{state.made[t.id]=(state.made[t.id]||0)+1;state.totalMade++;busy=false;$('#machine').classList.remove('working');$('#light').classList.remove('on');sound(820,.16);render();toast(`Izdelano: ${t.name}! 🎉`);if(state.totalMade===1)confetti()},time)});
   $('#inventory').addEventListener('click',e=>{const b=e.target.closest('[data-sell]');if(!b)return;const t=TOYS.find(x=>x.id===b.dataset.sell);if(!state.made[t.id])return;state.made[t.id]--;const bonus=eventToy().id===t.id?5:0,gain=Math.round(t.value*(1+state.up.market*.25))+bonus;state.coins+=gain;state.sold[t.id]=(state.sold[t.id]||0)+1;state.served=(state.served||0)+1;$('#shopToy').textContent=t.icon;$('#town').classList.add('selling');setTimeout(()=>$('#town').classList.remove('selling'),1550);sound(940,.12);render();toast(`Otrok je šel v trgovino po ${t.name}! +${gain} 🪙${bonus?' (dogodek!)':''}`)});
   $('#upgrades').addEventListener('click',e=>{const b=e.target.closest('[data-up]');if(!b)return;const u=UP.find(x=>x.id===b.dataset.up),price=u.base*(state.up[u.id]+1);if(state.coins<price||state.up[u.id]>=u.max)return;state.coins-=price;state.up[u.id]++;sound(720,.15);render();confetti();toast(`${u.name} je nadgrajen!`)});
-  $('#claim').addEventListener('click',()=>{const m=MISSIONS[state.mission%MISSIONS.length];if(!missionProgress(m).ready)return;state.coins+=m.reward;state.stars=(state.stars||0)+m.stars;state.mission++;state.missionStart={...state.sold};sound(1100,.18);confetti();render();toast(`Naročilo končano! +${m.reward} 🪙 in +${m.stars} ⭐`)});
+  $('#claim').addEventListener('click',()=>{const m=activeMission();if(!missionProgress(m).ready)return;state.coins+=m.reward;state.stars=(state.stars||0)+m.stars;state.mission++;state.missionStart={...state.sold};sound(1100,.18);confetti();render();toast(`Naročilo končano! +${m.reward} 🪙 in +${m.stars} ⭐`)});
   $('#paints').addEventListener('click',e=>{const b=e.target.closest('[data-paint]');if(!b)return;const p=PAINTS.find(x=>x.id===b.dataset.paint);if(!p||(state.stars||0)<p.stars)return;state.paint=p.id;sound(620,.12);render();toast(`Tovarna je zdaj: ${p.name}!`)});
   $('#reset').addEventListener('click',()=>{if(confirm('Želiš res izbrisati napredek in začeti znova?')){state=fresh();render();toast('Nova igra se začenja!')}});
   function confetti(){for(let i=0;i<28;i++){const e=document.createElement('i');e.className='confetti';e.style.left=Math.random()*100+'vw';e.style.background=['#ff685f','#ffc94a','#42c99a','#4b9fe8','#8f6be8'][i%5];e.style.setProperty('--x',(Math.random()*180-90)+'px');e.style.animationDelay=Math.random()*.35+'s';document.body.append(e);setTimeout(()=>e.remove(),2400)}}render();
@@ -243,10 +277,10 @@
     action.textContent = label;
     action.disabled = Boolean(waiting);
 
-    const mission = MISSIONS[state.mission % MISSIONS.length];
-    wanted = stage === 'done' ? TOYS.find(toy => toy.unlock <= state.level &&
+    const mission = activeMission();
+    wanted = stage === 'done' ? TOYS.find(toy => toyAvailable(toy) &&
       (mission.need[toy.id] || 0) > (state.sold[toy.id] || 0) - (state.missionStart[toy.id] || 0)) : car;
-    if (!wanted) wanted = TOYS.find(toy => toy.unlock <= state.level && state.made[toy.id] > 0) || car;
+    if (!wanted) wanted = TOYS.find(toy => toyAvailable(toy) && state.made[toy.id] > 0) || car;
     wish.textContent = wanted.icon + ' Želim si: ' + wanted.name.toLowerCase();
     $('#shopWish').textContent = 'Kupec želi: ' + wanted.name.toLowerCase();
     shopSell.textContent = 'Prodaj: ' + wanted.name.toLowerCase() + ' ' + wanted.icon;
@@ -310,21 +344,30 @@
   const play = $('#playLevel');
   const claim = $('#claim');
   const details = $('#levelInfoText');
-  const campaign = [
-    { name: 'Prva izmena', icon: '🚗', mission: MISSIONS[0] },
-    { name: 'Živali in roboti', icon: '🤖', mission: MISSIONS[1] }
-  ];
+  const campaign = MISSIONS.map((mission, index) => ({
+    name: index === 0 ? 'Prva izmena' : mission.title,
+    icon: ['🚗','🤖','🚀','🚂','🦕','🏙️','🌊','🎪'][index],
+    mission
+  }));
   const styles = document.createElement('style');
   styles.textContent = [
-    '.level-path{grid-template-columns:repeat(6,minmax(0,1fr))}',
-    '.level-card.adventure{grid-column:span 3;background:#fffdf4;min-height:114px;padding:13px;overflow-wrap:anywhere}',
+    '.level-path{grid-template-columns:repeat(4,minmax(0,1fr))}',
+    '.level-card.adventure{background:#fffdf4;min-height:114px;padding:13px;overflow-wrap:anywhere}',
     '.level-card.adventure.selected{background:#fff0b0}.level-card.adventure.complete{border-color:#247556}.level-card.adventure small{display:block;font-size:14px;line-height:1.3;opacity:1}',
-    '.level-card.future{min-height:0;padding:9px;background:#f4f7f2}.level-card.future b{font-size:13px}.level-card.future .level-icon{float:none;display:block;font-size:22px}.level-card.future small{font-size:12px}',
+    '.level-card.adventure:disabled{cursor:not-allowed;filter:none;opacity:.72}.level-card.adventure .level-icon{float:none;display:block;font-size:24px}.level-card.adventure small+small{margin-top:5px;color:#315961}',
     '.level-info{align-items:flex-start}.level-info>div{min-width:0}.level-info p{line-height:1.4}.level-info .level-progress{display:block;margin-top:6px;font-size:14px;font-weight:850}',
     '.level-info .play-level{min-height:44px;white-space:normal}.level-info .play-level.reward-ready{background:var(--mint);color:var(--ink)}',
-    '@media(max-width:620px){.level-path{grid-template-columns:repeat(3,minmax(0,1fr))}.level-card.adventure{grid-column:span 3}.level-info{flex-direction:column}.level-info .play-level{width:100%}}'
+    '.adventure-scene{position:absolute;z-index:8;top:20px;left:16px;max-width:calc(100% - 32px);background:#fff6cb;border:3px solid var(--ink);border-radius:14px;padding:8px 12px;font-weight:900;box-shadow:0 4px 0 #173a4838}',
+    '.town.festival .adventure-scene{background:#ffdd81}.town.festival .shop-sign{background:linear-gradient(110deg,#6d50b6,#a74e85)}.town.festival .shop-door{background:#ffd56d}.town.festival .town-road{border-top-color:#ffcf50}',
+    '.town.clean-river .river{box-shadow:0 4px 0 #5f924b,0 0 17px #dcffaf}',
+    '@media(max-width:620px){.level-path{grid-template-columns:repeat(2,minmax(0,1fr))}.level-card.adventure{padding:9px}.level-info{flex-direction:column}.level-info .play-level{width:100%}}'
   ].join('');
   document.head.append(styles);
+  const townScene = $('#town');
+  const sceneSign = document.createElement('div');
+  sceneSign.className = 'adventure-scene';
+  sceneSign.hidden = true;
+  townScene.append(sceneSign);
   const extra = document.createElement('span');
   extra.className = 'level-progress';
   details.after(extra);
@@ -336,7 +379,7 @@
   $('#level').parentElement.querySelector('small').textContent = 'rang tovarne';
   const helpSteps = $('#helpOverlay ol').children;
   helpSteps[1].textContent = 'Poglej cilj nivoja in pritisni gumb za naslednji korak.';
-  helpSteps[6].textContent = 'Prevzemi nagrado prvega nivoja, da odkleneš drugega. Rang tovarne raste z izdelanimi igračami.';
+  helpSteps[6].textContent = 'Prevzemi nagrado, da odkleneš naslednji nivo. Rang tovarne raste z izdelanimi igračami.';
 
   const openLevel = () => Math.min(state.mission + 1, campaign.length);
   const selectedLevel = () => Math.min(state.adventureLevel || openLevel(), openLevel());
@@ -345,6 +388,7 @@
     if (level <= state.mission) return 'continue';
     const mission = campaign[level - 1].mission;
     if (missionProgress(mission).ready) return 'claim';
+    if (mission.cleanup) return 'cleanup';
     if (!state.sold.car && level === 1) return 'guide';
     const toy = TOYS.find(item => (mission.need[item.id] || 0) > soldFor(item.id));
     if (state.made[toy.id] > 0) return 'shop';
@@ -358,31 +402,43 @@
       const n = index + 1;
       const locked = n > openLevel();
       const completed = n <= state.mission;
-      const progress = completed ? '✓ Nagrada prevzeta' : locked ? '🔒 Najprej dokončaj 1. nivo'
-        : 'Prodano ' + missionProgress(item.mission).done + ' od ' + missionProgress(item.mission).all;
+      const progress = completed ? '✓ Nagrada prevzeta' : locked ? '🔒 Dokončaj ' + (n - 1) + '. nivo'
+        : (item.mission.cleanup ? 'Pobrano ' : 'Prodano ') + missionProgress(item.mission).done + ' od ' + missionProgress(item.mission).all;
       return '<button type="button" class="level-card adventure' + (n === level ? ' selected' : '') +
         (completed ? ' complete' : '') + '" data-adventure="' + n + '" aria-pressed="' + (n === level) + '"' +
         (locked ? ' disabled' : '') + '><span class="level-icon" aria-hidden="true">' + item.icon +
         '</span><b>' + n + '. ' + item.name + '</b><small>' + item.mission.goal + '</small><small>' + progress + '</small></button>';
-    }).join('') + LEVELS.slice(campaign.length).map((item, index) =>
-      '<div class="level-card future"><span class="level-icon" aria-hidden="true">' + item.icon +
-      '</span><b>' + (index + campaign.length + 1) + '. ' + item.name + '</b><small>V pripravi</small></div>'
-    ).join('');
+    }).join('');
     $('#levelInfoTitle').textContent = level + '. nivo · ' + entry.name;
     details.textContent = entry.mission.goal + '. Nagrada: ' + entry.mission.reward + ' 🪙 in ' + entry.mission.stars + ' ⭐';
     extra.textContent = level <= state.mission ? '✓ Cilj dosežen in nagrada prevzeta.' : Object.entries(entry.mission.need).map(([id, count]) => {
       const toy = TOYS.find(item => item.id === id);
       return toy.icon + ' ' + toy.name + ' · ' + Math.min(soldFor(id), count) + ' od ' + count;
     }).join(' / ');
-    if (level === 1 && level > state.mission) extra.textContent += ' · Nagrada odklene 2. nivo.';
-    const labels = { claim: '🎁 Prevzemi nagrado', guide: '🚚 Začni s prvo igračo', shop: '🧸 Do trgovine', collect: '🚚 Do tovornjaka' };
+    if (level > state.mission && entry.mission.cleanup) {
+      const {done, all} = missionProgress(entry.mission);
+      extra.textContent = 'Ob potoku pobrano ' + done + ' od ' + all;
+    }
+    if (level > state.mission && level < CAMPAIGN_LENGTH) {
+      extra.textContent += ' · Nagrada odklene ' + (level + 1) + '. nivo.';
+    }
+    if (level === CAMPAIGN_LENGTH) extra.textContent += ' · 🏆 Pokal mojstra igrač';
+    const storyLevel = openLevel();
+    const storySigns = {3:'🚀 Vesoljska odprava',4:'🚂 Železniška postaja',5:'🦕 Dino park',6:'🏙️ Mesto igrač · tri igrače za izložbo',7:'🌊 Potok · pobrano ' + state.cleanupCaps + ' od 12',8:'🎪 Veliki festival'};
+    sceneSign.textContent = state.mission >= CAMPAIGN_LENGTH ? '🎉 Veliki festival · 🏆 Mojster igrač' : storySigns[storyLevel] || '';
+    sceneSign.hidden = !sceneSign.textContent;
+    townScene.classList.toggle('festival', storyLevel === CAMPAIGN_LENGTH);
+    townScene.classList.toggle('clean-river', state.mission >= CLEANUP_LEVEL || state.cleanupCaps >= 12);
+    const river = townScene.querySelector('.river');
+    const remainingCaps = storyLevel === CLEANUP_LEVEL ? 12 - state.cleanupCaps : 0;
+    river.innerHTML = Array.from({length: remainingCaps}, (_, i) =>
+      '<i aria-hidden="true" style="position:absolute;left:' + (9 + i % 6 * 14) + '%;top:' + (12 + Math.floor(i / 6) * 50) + '%;width:8px;height:8px;border:1px solid white;border-radius:50%;background:' + ['#ff685f','#ffc94a','#42c99a'][i % 3] + '"></i>'
+    ).join('');
+    const labels = { claim: '🎁 Prevzemi nagrado', guide: '🚚 Začni s prvo igračo', shop: '🧸 Do trgovine', collect: '🚚 Do tovornjaka', cleanup: '🌊 Do tovornjaka za čiščenje' };
     play.textContent = task === 'continue'
-      ? (level < openLevel() ? 'Odpri 2. nivo' : 'Poglej naslednje naročilo')
+      ? (level < openLevel() ? 'Odpri ' + (level + 1) + '. nivo' : 'Poglej naslednje naročilo')
       : labels[task] || '🏭 Izdelaj naslednjo igračo';
     play.classList.toggle('reward-ready', task === 'claim');
-    document.querySelectorAll('.toy-card.locked .badge').forEach(badge => {
-      badge.textContent = badge.textContent.replace('STOPNJA', 'RANG');
-    });
     if (focusLevel) path.querySelector('[data-adventure="' + focusLevel + '"]')?.focus({ preventScroll: true });
   }
   function goTo(button) {
@@ -402,12 +458,12 @@
     const task = nextTask(level);
     if (task === 'claim') claim.click();
     else if (task === 'continue' && level < openLevel()) {
-      state.adventureLevel = openLevel();
+      state.adventureLevel = level + 1;
       save();
       drawAdventure(state.adventureLevel);
     } else if (task === 'continue') $('.mission-board').scrollIntoView({ block: 'center' });
     else if (task === 'guide') goTo($('#firstOrderAction'));
-    else if (task === 'collect') goTo($('#collect'));
+    else if (task === 'collect' || task === 'cleanup') goTo($('#collect'));
     else if (task === 'shop') goTo($('#shopSell'));
     else {
       if (!busy) $('[data-toy="' + task + '"]').click();
@@ -421,8 +477,9 @@
     const focusedLevel = document.activeElement?.dataset.adventure;
     if (state.mission === previousMission + 1 && state.mission <= campaign.length) {
       state.adventureLevel = openLevel();
-      announcement.textContent = state.mission === 1 ? '🎉 Prvi nivo je končan. Drugi nivo je odklenjen!'
-        : '🎉 Oba nivoja sta končana! V tovarni lahko nadaljuješ z naročili.';
+      announcement.textContent = state.mission === CAMPAIGN_LENGTH
+        ? '🎉 Vseh osem nivojev je končanih! Osvojil si pokal mojstra igrač.'
+        : '🎉 Nagrada prevzeta. Odklenjen je ' + openLevel() + '. nivo!';
       announcement.hidden = false;
     } else if (state.mission < previousMission) {
       announcement.textContent = '';
