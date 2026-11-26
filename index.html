@@ -175,5 +175,134 @@
   $('#paints').addEventListener('click',e=>{const b=e.target.closest('[data-paint]');if(!b)return;const p=PAINTS.find(x=>x.id===b.dataset.paint);if(!p||(state.stars||0)<p.stars)return;state.paint=p.id;sound(620,.12);render();toast(`Tovarna je zdaj: ${p.name}!`)});
   $('#reset').addEventListener('click',()=>{if(confirm('Želiš res izbrisati napredek in začeti znova?')){state=fresh();render();toast('Nova igra se začenja!')}});
   function confetti(){for(let i=0;i<28;i++){const e=document.createElement('i');e.className='confetti';e.style.left=Math.random()*100+'vw';e.style.background=['#ff685f','#ffc94a','#42c99a','#4b9fe8','#8f6be8'][i%5];e.style.setProperty('--x',(Math.random()*180-90)+'px');e.style.animationDelay=Math.random()*.35+'s';document.body.append(e);setTimeout(()=>e.remove(),2400)}}render();
+</script><script id="first-order">
+(() => {
+  const styles = document.createElement('style');
+  styles.textContent =     '.first-order,.shop-counter{background:#fff8d8;border:3px solid var(--ink);border-radius:20px;padding:clamp(12px,2.4vw,20px);box-shadow:var(--shadow);margin-bottom:18px}' +
+    '.first-order h2{margin:3px 0 5px;font-size:clamp(20px,3vw,30px);line-height:1.12}.first-order p,.shop-counter p{margin:0;font-weight:750}.first-order small{font-size:13px;font-weight:900;color:#435e5e}' +
+    '.first-order button,.shop-counter button,.guide-next{background:var(--yellow);border:2px solid var(--ink);border-radius:13px;padding:10px 15px;min-height:44px;font-weight:900;cursor:pointer}.first-order button{margin-top:10px}.first-order button:disabled,.shop-counter button:disabled{opacity:.62;cursor:default}' +
+    '.shop-counter{margin-top:14px;margin-bottom:0;display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:space-between;background:#e7f7eb}.shop-counter small{display:block;font-size:14px;margin-top:4px}' +
+    '.guide-next{display:block;margin:14px 0 0 auto}.guide-next[hidden]{display:none}.guide-highlight{outline:3px solid #ffe38b;outline-offset:4px}.guide-highlight:focus-visible{outline-color:#1b70ad}' +
+    '#town .queue-label{left:38%;right:auto;bottom:124px;max-width:55%;font-size:13px}.town.selling .kid:first-child{animation-name:buyer-to-door}@keyframes buyer-to-door{0%{transform:translate(0,0)}75%{opacity:1}100%{transform:translate(var(--buyer-x,100px),var(--buyer-y,-4px)) scale(.58);opacity:0}}' +
+    '@media(max-width:620px){.first-order button,.shop-counter button{width:100%}}@media(max-width:460px){#town .queue-label{left:auto;right:10%;bottom:90px;max-width:80%;font-size:12px}}';
+  document.head.append(styles);
+
+  const header = $('.topbar');
+  const town = $('#town');
+  const collect = $('#collect');
+  const make = $('#make');
+  const inventory = $('#inventory');
+  const wish = $('.queue-label');
+  const car = TOYS.find(toy => toy.id === 'car');
+  header.insertAdjacentHTML('afterend', '<section class="first-order" aria-labelledby="firstOrderTitle"><small id="firstOrderStep"></small><h2 id="firstOrderTitle">Izdelaj in prodaj svoj prvi avtomobilček</h2><p id="firstOrderHint" aria-live="polite"></p><button type="button" id="firstOrderAction"></button></section>');
+  town.insertAdjacentHTML('afterend', '<div class="shop-counter"><div><p id="shopWish"></p><small id="shopReceipt" role="status"></small></div><button type="button" id="shopSell"></button></div>');
+  const action = $('#firstOrderAction');
+  const shopSell = $('#shopSell');
+  const next = document.createElement('button');
+  next.type = 'button';
+  next.className = 'guide-next';
+  next.hidden = true;
+  $('.hero').after(next);
+
+  const steps = {
+    truck: ['1 od 3', 'Tovornjak pripelje pokrovčke naravnost v tovarno.', '🚚 Pokliči tovornjak'],
+    make: ['2 od 3', 'Za avtomobilček potrebuješ 4 pokrovčke.', '🏭 Izdelaj avtomobilček'],
+    sell: ['3 od 3', 'Prvi kupec že čaka na avtomobilček.', '🧸 Pojdi do trgovine'],
+    done: ['✓ Opravljeno', 'Prvi avtomobilček je našel kupca!', '📋 Poglej naslednje naročilo']
+  };
+  let stage;
+  let wanted;
+  let wasDelivering = false;
+  let currentSave = state;
+  function show(element, block = 'center') {
+    element.scrollIntoView({ block });
+    const button = element.matches('button') ? element : null;
+    if (button) button.focus({ preventScroll: true });
+  }
+  function updateGuide() {
+    if (currentSave !== state) {
+      currentSave = state;
+      wasDelivering = false;
+      $('#shopReceipt').textContent = '';
+    }
+    if (wasDelivering && !delivering && !state.firstDelivery) {
+      state.firstDelivery = true;
+      save();
+    }
+    wasDelivering = delivering;
+    if (state.sold.car > 0) stage = 'done';
+    else if (state.made.car > 0) stage = 'sell';
+    else if (!state.firstDelivery || state.caps < car.cost) stage = 'truck';
+    else stage = 'make';
+
+    const [step, hint, label] = steps[stage];
+    $('#firstOrderStep').textContent = step;
+    const waiting = stage === 'truck' && delivering ? 'Tovornjak je na poti …'
+      : stage === 'make' && busy ? 'Tovarna izdeluje igračo …' : '';
+    $('#firstOrderHint').textContent = waiting || hint;
+    action.textContent = label;
+    action.disabled = Boolean(waiting);
+
+    const mission = MISSIONS[state.mission % MISSIONS.length];
+    wanted = stage === 'done' ? TOYS.find(toy => toy.unlock <= state.level &&
+      (mission.need[toy.id] || 0) > (state.sold[toy.id] || 0) - (state.missionStart[toy.id] || 0)) : car;
+    if (!wanted) wanted = TOYS.find(toy => toy.unlock <= state.level && state.made[toy.id] > 0) || car;
+    wish.textContent = wanted.icon + ' Želim si: ' + wanted.name.toLowerCase();
+    $('#shopWish').textContent = 'Kupec želi: ' + wanted.name.toLowerCase();
+    shopSell.textContent = 'Prodaj: ' + wanted.name.toLowerCase() + ' ' + wanted.icon;
+    shopSell.disabled = !state.made[wanted.id];
+    collect.classList.toggle('guide-highlight', stage === 'truck' && !delivering);
+    make.classList.toggle('guide-highlight', stage === 'make' && !busy && state.selected === 'car');
+    shopSell.classList.toggle('guide-highlight', stage === 'sell');
+
+    next.hidden = Boolean(waiting) || (stage !== 'make' && stage !== 'sell');
+    next.textContent = label;
+    if (stage === 'make' && next.previousElementSibling !== $('.hero')) $('.hero').after(next);
+    if (stage === 'sell' && next.previousElementSibling !== make) make.after(next);
+  }
+  function advance() {
+    if (stage === 'truck') {
+      show($('#yard'));
+      collect.click();
+    } else if (stage === 'make') {
+      if (state.selected !== 'car') $('[data-toy="car"]').click();
+      show($('#machine'));
+      make.click();
+    } else if (stage === 'sell') {
+      show(town);
+      shopSell.focus({ preventScroll: true });
+    } else {
+      show($('.mission-board'));
+    }
+  }
+  action.addEventListener('click', advance);
+  next.addEventListener('click', advance);
+  shopSell.addEventListener('click', () => {
+    if (shopSell.disabled) return;
+    show(town);
+    inventory.querySelector('[data-sell="' + wanted.id + '"]').click();
+  });
+  inventory.addEventListener('click', event => {
+    const button = event.target.closest('[data-sell]');
+    if (!button || button.disabled) return;
+    const buyer = $('.queue .kid').getBoundingClientRect();
+    const door = $('.shop-door').getBoundingClientRect();
+    if (!town.classList.contains('selling')) {
+      town.style.setProperty('--buyer-x', door.left + (door.width - buyer.width) / 2 - buyer.left + 'px');
+      town.style.setProperty('--buyer-y', door.bottom - buyer.bottom - 5 + 'px');
+    }
+    const coinsBefore = state.coins;
+    queueMicrotask(() => {
+      const earned = state.coins - coinsBefore;
+      if (earned > 0) $('#shopReceipt').textContent = '✨ Prodano! Zaslužek: +' + earned + ' 🪙';
+    });
+  }, true);
+  const renderGame = render;
+  render = function () {
+    renderGame();
+    updateGuide();
+  };
+  updateGuide();
+})();
 </script>
 </body></html>
