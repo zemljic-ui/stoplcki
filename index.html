@@ -18,6 +18,111 @@
   </style>
   <style>
     @media(max-width:620px){.stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:100%;gap:9px}.stat{min-width:0!important;width:auto;box-sizing:border-box;justify-content:flex-start;overflow:hidden}.stat span{min-width:0}.stat small{font-size:11px;overflow-wrap:anywhere}.stat b{font-size:18px}}
+  </style>  <style id="diorama-depth">
+    /* Svetloba prihaja od zgoraj levo. */
+    .yard {
+      --building-depth: 20px;
+      min-height: 242px;
+      isolation: isolate;
+      border-radius: 20px;
+      background: radial-gradient(ellipse at 72% 30%, #698c9c, transparent 68%), linear-gradient(164deg, #234f61, #102f42);
+    }
+    .road {
+      bottom: 16px;
+      height: 36px;
+      border: 1px solid #90b2ba;
+      border-bottom: 8px solid #112c36;
+      border-radius: 45% 12px 12px 12px / 70% 12px 12px 12px;
+      background: linear-gradient(165deg, #63808b, #3f5a69);
+      box-shadow: 0 6px 9px #0e2936a6;
+    }
+    .road:after { left: 12px; right: 12px; top: 13px; }
+    .intake-factory { right: calc(var(--building-depth) + 4px); }
+    .intake-stack, .chimney {
+      border-radius: 5px 5px 0 0;
+      box-shadow: inset -9px 0 #173a4844, 5px 4px 0 #173a482c;
+    }
+    .truck-bed { box-shadow: inset 0 6px #ffffff55, inset 0 -7px #9c531f3b, 3px 5px 0 #183643; }
+    .truck-cab { box-shadow: inset 0 5px #ffffff57, inset -8px 0 #8a302e46, 2px 4px 0 #183643; }
+    .truck .wheel {
+      background: radial-gradient(circle at 45% 42%, #e3f1eb 0 16%, #76939b 19% 29%, #254454 32% 52%, #10272f 55%);
+      box-shadow: 3px 3px 0 #0b2634aa;
+    }
+    .town {
+      --building-depth: 25px;
+      isolation: isolate;
+      min-height: 370px;
+      border-bottom-width: 10px;
+      background: radial-gradient(ellipse at 82% 15%, #fff8b955, transparent 34%),
+        radial-gradient(ellipse 52% 24% at 17% 43%, #7fbc76 99%, transparent 100%),
+        radial-gradient(ellipse 58% 28% at 74% 45%, #9ace80 99%, transparent 100%),
+        linear-gradient(#96daec 0%, #d5f5ed 48%, #89c366 48%, #a9d680 87%, #6da44b 100%);
+    }
+    .town:before { bottom: 55px; border-bottom-color: #f3dbad; box-shadow: 0 7px 0 -3px #628f4499; }
+    .town-road {
+      background: linear-gradient(#9bc76e 0 13%, #c09562 13% 26%, #936642 26% 84%, #705137 84%);
+      border-top-color: #5d9247;
+    }
+    .town-road:after { display: none; }
+    .river {
+      background: repeating-linear-gradient(172deg, transparent 0 13px, #c9fcf398 14px 16px), linear-gradient(110deg, #7edff1, #3ca4ce);
+      box-shadow: 0 5px 0 #5f924b;
+    }
+    .intake-factory, .town-factory {
+      background: linear-gradient(120deg, #ffffff45, #245c6424), var(--factory-face, #e5efe2);
+    }
+    .shop { background: linear-gradient(135deg, #fff5d9 18%, #f6ddb0 82%); right: calc(4% + var(--building-depth)); }
+    .intake-factory, .town-factory, .shop {
+      box-shadow: inset 0 -10px #173a4820, 10px 12px 0 #173a4838;
+    }
+    .intake-factory:before, .town-factory:after, .shop:after {
+      content: "";
+      position: absolute;
+      top: -4px;
+      bottom: -4px;
+      left: 100%;
+      width: calc(var(--building-depth) + 4px);
+      border: 3px solid var(--ink);
+      border-radius: 0 7px 3px 0;
+      background: linear-gradient(90deg, #18384645, #1838468a), var(--factory-face, #e5efe2);
+      transform: skewY(-28deg);
+      transform-origin: left;
+      pointer-events: none;
+    }
+    .shop:after { background: linear-gradient(90deg, #e7bc79, #b98249); }
+    .shop-sign { z-index: 1; background: linear-gradient(#ff7f70, #d74346); box-shadow: 0 4px 0 #9f3f3b; }
+    .shop-window {
+      background: linear-gradient(136deg, transparent 26%, #ffffff96 27% 35%, transparent 36% 54%, #ffffff66 55% 62%, transparent 63%), #b4e6f1;
+      box-shadow: inset 0 -8px #5290ad49;
+    }
+    .factory-door, .shop-door { box-shadow: inset 5px 5px #173a4844; }
+    .town .tree, .town .flowers { filter: drop-shadow(4px 8px 2px #43602c55); }
+    .machine {
+      background: linear-gradient(140deg, #edf8f6, #9fbcc3 78%);
+      box-shadow: inset 7px 8px #fff9, inset -9px -10px #385c7136, 0 7px 0 #36596843;
+    }
+    .machine-top { box-shadow: inset 8px 7px #ffffff38, inset -10px -7px #263b5757, 4px 5px 0 #26475566; }
+    .press { box-shadow: inset 5px 0 #ffffff51, inset -7px 0 #80374255; }
+    .toy-card .art { filter: drop-shadow(4px 7px 0 #183a482d); }
+    @media (max-width: 620px) {
+      .yard { --building-depth: 14px; min-height: 230px; }
+      .town { --building-depth: 13px; }
+      .town-factory, .shop { box-shadow: inset 0 -9px #173a4820, 6px 8px 0 #173a4838; }
+    }
+    @media (max-width: 460px) {
+      .town { min-height: 350px; }
+      .shop { width: min(160px, 46%); }
+      .shop-window { width: 42%; bottom: 27px; height: 61px; }
+      .shop-door { width: 29%; height: 84px; }
+      .queue { left: auto; right: calc(7% + var(--building-depth)); bottom: 42px; }
+      .queue-label { left: auto; right: calc(6% + var(--building-depth)); bottom: 85px; }
+      .town.selling .kid:first-child { animation-name: diorama-walk-mobile; }
+      @keyframes diorama-walk-mobile {
+        0% { transform: translate(0, 0); }
+        60% { transform: translate(60px, -12px); }
+        100% { transform: translate(79px, -32px) scale(.67); opacity: 0; }
+      }
+    }
   </style>
 </head>
 <body>
